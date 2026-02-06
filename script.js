@@ -47,6 +47,10 @@ const CONFIG = Object.freeze({
     MAX_RETRY_COUNT: 3,
     RETRY_DELAY_MS: 1000,
 
+    // Supabase
+    SUPABASE_URL: 'https://nyhybmkdgozecizvpezy.supabase.co',
+    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55aHlibWtkZ296ZWNpenZwZXp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjA4MjEsImV4cCI6MjA4NTkzNjgyMX0.DtfFUp9IZnQzw7NyWvGPksBzfRV5F25UpOKDQnoY06s',
+
     // Gemini AI
     GEMINI_API_KEY: 'AIzaSyBW9Q4m2i8npqz15BsBZuNGf2YZOWqEDEE',
     GEMINI_API_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
@@ -59,6 +63,17 @@ const CONFIG = Object.freeze({
 });
 
 // Question data is loaded from CONFIG.DATA_URL via loadQuestions()
+
+// ==================== Supabase Client ====================
+
+var supabaseClient = null;
+try {
+    if (typeof supabase !== 'undefined' && supabase.createClient) {
+        supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    }
+} catch (e) {
+    console.warn('Supabase client initialization failed:', e);
+}
 
 // ==================== Security Utilities ====================
 
@@ -617,9 +632,9 @@ function setupEventListeners() {
     // Clear rankings
     if (dom.clearRankingBtn) {
         dom.clearRankingBtn.addEventListener('click', function () {
-            confirmAction('정말로 모든 순위 기록을 삭제하시겠습니까?').then(function (confirmed) {
+            confirmAction('정말로 모든 순위 기록을 삭제하시겠습니까?').then(async function (confirmed) {
                 if (confirmed) {
-                    clearRanking();
+                    await clearRanking();
                     announceToScreenReader('순위가 초기화되었습니다');
                 }
             });
@@ -1410,10 +1425,11 @@ function shuffleArrayInPlace(array) {
     return array;
 }
 
-// ==================== Ranking System (localStorage) ====================
+// ==================== Ranking System (Supabase + localStorage fallback) ====================
 
 /**
- * Saves the current game result to the ranking.
+ * Saves the current game result to Supabase, with localStorage fallback.
+ * Returns a Promise (fire-and-forget from showResults).
  */
 function saveRanking() {
     var totalQuestions = gameState.questions.length;
@@ -1437,7 +1453,23 @@ function saveRanking() {
         }
     }
 
-    var newRecord = {
+    var now = new Date().toISOString();
+
+    // Supabase record (snake_case columns)
+    var dbRecord = {
+        name: gameState.playerName,
+        score: gameState.score,
+        grade: grade.letter,
+        correct_count: correctAnswerCount,
+        total_questions: totalQuestions,
+        category_scores: categoryScores,
+        category: gameState.selectedCategory,
+        mode: gameState.quizMode,
+        played_at: now
+    };
+
+    // localStorage record (camelCase, legacy format)
+    var localRecord = {
         name: gameState.playerName,
         score: gameState.score,
         grade: grade.letter,
@@ -1446,42 +1478,105 @@ function saveRanking() {
         categoryScores: categoryScores,
         category: gameState.selectedCategory,
         mode: gameState.quizMode,
-        date: new Date().toISOString(),
+        date: now,
         timestamp: Date.now()
     };
 
-    // Load, validate, add, sort, trim, save
-    var rankings = getRankings();
-    rankings.push(newRecord);
+    // Try Supabase first, fall back to localStorage
+    if (supabaseClient) {
+        return supabaseClient
+            .from('rankings')
+            .insert(dbRecord)
+            .then(function (result) {
+                if (result.error) {
+                    console.warn('Supabase insert failed, falling back to localStorage:', result.error);
+                    saveRankingToLocalStorage(localRecord);
+                }
+            })
+            .catch(function (err) {
+                console.warn('Supabase insert error, falling back to localStorage:', err);
+                saveRankingToLocalStorage(localRecord);
+            });
+    }
 
+    // No Supabase client — use localStorage directly
+    saveRankingToLocalStorage(localRecord);
+    return Promise.resolve();
+}
+
+/**
+ * Saves a ranking record to localStorage (fallback).
+ * @param {Object} record - The ranking record in localStorage format.
+ */
+function saveRankingToLocalStorage(record) {
+    var rankings = getRankingsFromLocalStorage();
+    rankings.push(record);
     rankings.sort(function (a, b) {
-        if (b.score !== a.score) {
-            return b.score - a.score;
-        }
+        if (b.score !== a.score) return b.score - a.score;
         return b.timestamp - a.timestamp;
     });
-
     rankings = rankings.slice(0, CONFIG.MAX_RANKINGS);
-
     if (!Storage.set(CONFIG.STORAGE_KEY, rankings)) {
         console.warn('Failed to save ranking to localStorage.');
     }
 }
 
 /**
- * Retrieves and validates ranking data from localStorage.
+ * Retrieves rankings from localStorage (synchronous, for fallback).
  * @returns {Array} Validated rankings array.
  */
-function getRankings() {
+function getRankingsFromLocalStorage() {
     var rawData = Storage.get(CONFIG.STORAGE_KEY, []);
     return validateRankings(rawData);
 }
 
 /**
+ * Retrieves rankings from Supabase, with localStorage fallback.
+ * @returns {Promise<Array>} Rankings array.
+ */
+function getRankings() {
+    if (supabaseClient) {
+        return supabaseClient
+            .from('rankings')
+            .select('*')
+            .order('score', { ascending: false })
+            .order('played_at', { ascending: false })
+            .limit(CONFIG.MAX_RANKINGS)
+            .then(function (result) {
+                if (result.error) {
+                    console.warn('Supabase select failed, falling back to localStorage:', result.error);
+                    return getRankingsFromLocalStorage();
+                }
+                // Map DB columns (snake_case) to display format (camelCase)
+                return (result.data || []).map(function (row) {
+                    return {
+                        name: row.name,
+                        score: row.score,
+                        grade: row.grade,
+                        correctCount: row.correct_count,
+                        totalQuestions: row.total_questions,
+                        categoryScores: row.category_scores || {},
+                        category: row.category,
+                        mode: row.mode,
+                        date: row.played_at,
+                        timestamp: new Date(row.played_at).getTime()
+                    };
+                });
+            })
+            .catch(function (err) {
+                console.warn('Supabase select error, falling back to localStorage:', err);
+                return getRankingsFromLocalStorage();
+            });
+    }
+
+    return Promise.resolve(getRankingsFromLocalStorage());
+}
+
+/**
  * Shows the ranking modal with safe DOM construction (XSS-protected).
  */
-function showRankingModal() {
-    var rankings = getRankings();
+async function showRankingModal() {
+    var rankings = await getRankings();
     var rankingList = getElement('ranking-list');
     var emptyRanking = getElement('empty-ranking');
 
@@ -1622,11 +1717,23 @@ function hideRankingModal() {
 }
 
 /**
- * Clears all ranking data and refreshes the modal.
+ * Clears all ranking data from Supabase and localStorage, then refreshes the modal.
  */
-function clearRanking() {
+async function clearRanking() {
     Storage.remove(CONFIG.STORAGE_KEY);
-    showRankingModal();
+
+    if (supabaseClient) {
+        try {
+            var result = await supabaseClient.from('rankings').delete().gte('id', 0);
+            if (result.error) {
+                console.warn('Supabase delete failed:', result.error);
+            }
+        } catch (err) {
+            console.warn('Supabase delete error:', err);
+        }
+    }
+
+    await showRankingModal();
 }
 
 // ==================== UX Enhancements ====================
