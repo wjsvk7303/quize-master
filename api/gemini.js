@@ -1,7 +1,5 @@
-// Vercel Serverless Function (Node.js)
+// Vercel Serverless Function (Node.js 18+)
 // Proxies requests to Google Gemini API to hide the API Key
-
-const fetch = require('node-fetch'); // Vercel provides node-fetch in the environment usually, or native fetch in Node 18+
 
 module.exports = async (req, res) => {
     // 1. Method check
