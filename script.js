@@ -16,7 +16,7 @@ const CONFIG = Object.freeze({
         { threshold: 70, text: 'B 등급', letter: 'B', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', emoji: '🎉', title: '상식 우수!', message: '잘하셨어요! 평균 이상의 실력이에요!' },
         { threshold: 60, text: 'C 등급', letter: 'C', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', emoji: '👍', title: '상식 보통!', message: '괜찮아요! 조금만 더 노력하면 더 좋아질 거예요!' },
         { threshold: 50, text: 'D 등급', letter: 'D', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)', emoji: '📚', title: '상식 부족!', message: '더 많이 공부하면 실력이 늘 거예요!' },
-        { threshold: 0,  text: 'F 등급', letter: 'F', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', emoji: '💪', title: '더 노력 필요!', message: '다시 도전해서 더 좋은 결과를 만들어보세요!' }
+        { threshold: 0, text: 'F 등급', letter: 'F', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', emoji: '💪', title: '더 노력 필요!', message: '다시 도전해서 더 좋은 결과를 만들어보세요!' }
     ],
 
     // Animation delays (ms)
@@ -38,7 +38,7 @@ const CONFIG = Object.freeze({
         { min: 80, color: '#10b981' },
         { min: 60, color: '#667eea' },
         { min: 40, color: '#f59e0b' },
-        { min: 0,  color: '#ef4444' }
+        { min: 0, color: '#ef4444' }
     ],
 
     // Data loading
@@ -48,12 +48,19 @@ const CONFIG = Object.freeze({
     RETRY_DELAY_MS: 1000,
 
     // Supabase
-    SUPABASE_URL: 'https://nyhybmkdgozecizvpezy.supabase.co',
-    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55aHlibWtkZ296ZWNpenZwZXp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjA4MjEsImV4cCI6MjA4NTkzNjgyMX0.DtfFUp9IZnQzw7NyWvGPksBzfRV5F25UpOKDQnoY06s',
+    // Supabase
+    // Note: This is the "Anon" key, which is designed to be safe for client-side use.
+    // Real security is handled by Row Level Security (RLS) policies in the Supabase database.
+    SUPABASE_URL: window.LOCAL_CONFIG?.SUPABASE_URL || 'https://nyhybmkdgozecizvpezy.supabase.co',
+    SUPABASE_ANON_KEY: window.LOCAL_CONFIG?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55aHlibWtkZ296ZWNpenZwZXp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjA4MjEsImV4cCI6MjA4NTkzNjgyMX0.DtfFUp9IZnQzw7NyWvGPksBzfRV5F25UpOKDQnoY06s',
 
     // Gemini AI
-    GEMINI_API_KEY: 'AIzaSyBW9Q4m2i8npqz15BsBZuNGf2YZOWqEDEE',
-    GEMINI_API_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+    // If LOCAL_CONFIG.GEMINI_API_KEY exists, we use it directly (Local Dev)
+    // Otherwise, we assume we are in production and use the same URL but without key (Proxied)
+    GEMINI_API_KEY: window.LOCAL_CONFIG?.GEMINI_API_KEY || '',
+    GEMINI_API_URL: window.LOCAL_CONFIG?.GEMINI_API_KEY
+        ? 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+        : '/api/gemini', // Vercel Serverless Function path
     GEMINI_TIMEOUT_MS: 30000,
     GEMINI_TEMPERATURE: 0.8,
     AI_QUESTION_COUNT: 10,
@@ -800,7 +807,12 @@ var _lastGeminiRequestTime = 0;
 function generateAIQuestions(category) {
     var count = CONFIG.AI_QUESTION_COUNT;
     var prompt = buildGeminiPrompt(category, count);
-    var url = CONFIG.GEMINI_API_URL + '?key=' + CONFIG.GEMINI_API_KEY;
+
+    // If we have a key (Local), append it. If not (Production/Proxy), don't append key.
+    var url = CONFIG.GEMINI_API_URL;
+    if (CONFIG.GEMINI_API_KEY) {
+        url += '?key=' + CONFIG.GEMINI_API_KEY;
+    }
 
     _lastGeminiRequestTime = Date.now();
 

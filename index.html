@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,11 @@
     <title>상식 퀴즈 게임 - Quiz Master</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="background-overlay" aria-hidden="true"></div>
 
@@ -58,17 +61,8 @@
 
             <div class="name-input-section">
                 <label for="user-name" class="input-label">이름을 입력해주세요</label>
-                <input
-                    type="text"
-                    id="user-name"
-                    class="name-input"
-                    placeholder="홍길동"
-                    maxlength="20"
-                    autocomplete="off"
-                    aria-required="true"
-                    aria-describedby="name-help"
-                    aria-invalid="false"
-                >
+                <input type="text" id="user-name" class="name-input" placeholder="홍길동" maxlength="20" autocomplete="off"
+                    aria-required="true" aria-describedby="name-help" aria-invalid="false">
                 <div id="name-help" class="input-help">20자 이내로 입력하세요. 엔터키로 시작할 수 있습니다.</div>
                 <div id="name-error" class="input-error hidden" role="alert" aria-live="assertive"></div>
             </div>
@@ -76,27 +70,32 @@
             <div class="category-selection">
                 <h2 class="section-title">카테고리 선택</h2>
                 <div class="category-grid" role="group" aria-label="퀴즈 카테고리">
-                    <button class="category-card" data-category="all" aria-label="전체 카테고리 선택 - 40문제" aria-pressed="false">
+                    <button class="category-card" data-category="all" aria-label="전체 카테고리 선택 - 40문제"
+                        aria-pressed="false">
                         <div class="category-icon" aria-hidden="true">🌟</div>
                         <div class="category-name">전체</div>
                         <div class="category-count">40문제</div>
                     </button>
-                    <button class="category-card" data-category="한국사" aria-label="한국사 카테고리 선택 - 10문제" aria-pressed="false">
+                    <button class="category-card" data-category="한국사" aria-label="한국사 카테고리 선택 - 10문제"
+                        aria-pressed="false">
                         <div class="category-icon" aria-hidden="true">📚</div>
                         <div class="category-name">한국사</div>
                         <div class="category-count">10문제</div>
                     </button>
-                    <button class="category-card" data-category="과학" aria-label="과학 카테고리 선택 - 10문제" aria-pressed="false">
+                    <button class="category-card" data-category="과학" aria-label="과학 카테고리 선택 - 10문제"
+                        aria-pressed="false">
                         <div class="category-icon" aria-hidden="true">🔬</div>
                         <div class="category-name">과학</div>
                         <div class="category-count">10문제</div>
                     </button>
-                    <button class="category-card" data-category="지리" aria-label="지리 카테고리 선택 - 10문제" aria-pressed="false">
+                    <button class="category-card" data-category="지리" aria-label="지리 카테고리 선택 - 10문제"
+                        aria-pressed="false">
                         <div class="category-icon" aria-hidden="true">🗺️</div>
                         <div class="category-name">지리</div>
                         <div class="category-count">10문제</div>
                     </button>
-                    <button class="category-card" data-category="예술과 문화" aria-label="예술과 문화 카테고리 선택 - 10문제" aria-pressed="false">
+                    <button class="category-card" data-category="예술과 문화" aria-label="예술과 문화 카테고리 선택 - 10문제"
+                        aria-pressed="false">
                         <div class="category-icon" aria-hidden="true">🎨</div>
                         <div class="category-name">예술과 문화</div>
                         <div class="category-count">10문제</div>
@@ -148,7 +147,8 @@
                         문제 <span id="current-question">1</span> / <span id="total-questions">40</span>
                     </span>
                 </div>
-                <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="퀴즈 진행률">
+                <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+                    aria-label="퀴즈 진행률">
                     <div id="progress-fill" class="progress-fill"></div>
                 </div>
             </div>
@@ -349,7 +349,8 @@
     </div>
 
     <!-- First-time welcome overlay -->
-    <div id="welcome-overlay" class="welcome-overlay hidden" role="dialog" aria-labelledby="welcome-overlay-title" aria-modal="true">
+    <div id="welcome-overlay" class="welcome-overlay hidden" role="dialog" aria-labelledby="welcome-overlay-title"
+        aria-modal="true">
         <div class="welcome-overlay-content">
             <div class="welcome-overlay-header">
                 <h2 id="welcome-overlay-title">Quiz Master에 오신 것을 환영합니다!</h2>
@@ -393,6 +394,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="apikey.js"></script>
     <script src="script.js"></script>
 </body>
+
 </html>
